@@ -1,10 +1,13 @@
+from collections.abc import Callable
+
+import string
 from datetime import datetime
-from random import random
+import random
 from uuid import uuid4
 
-from sqlalchemy import ForeignKey, create_engine, UUID, Uuid, select, func
-from sqlalchemy.orm import (declared_attr, DeclarativeBase, Mapped,
-                            mapped_column, relationship, Session, joinedload)
+from sqlalchemy.orm import declared_attr, DeclarativeBase, Mapped, \
+    mapped_column, relationship, Session, joinedload
+from sqlalchemy import ForeignKey, create_engine, UUID, Uuid, select
 
 
 class Base(DeclarativeBase):
@@ -27,9 +30,6 @@ class Product(NameMixin, Base):
         back_populates='products',
     )
 
-    def __repr__(self):
-        return f'Product name is {self.name}'
-
 
 class User(NameMixin, Base):
     password: Mapped[int]
@@ -39,9 +39,6 @@ class User(NameMixin, Base):
         back_populates='users',
     )
 
-    def __repr__(self):
-        return f'User({self.name=})'
-
 
 class Device(NameMixin, Base):
     description: Mapped[str]
@@ -50,9 +47,6 @@ class Device(NameMixin, Base):
         secondary='devicetask',
         back_populates='devices',
     )
-
-    def __repr__(self):
-        return f'Device(name={self.name})'
 
 
 class Task(Base):
@@ -72,9 +66,6 @@ class Task(Base):
         secondary='usertask',
         back_populates='tasks',
     )
-
-    def __repr__(self):
-        return f'Task(id={self.id})'
 
 
 class ProductTakMtm(Base):
@@ -100,21 +91,17 @@ def create_tables(engine):
 def task1init(session: Session):
     user1 = User(name='Max', password=574732477)
     user2 = User(name='Oleg', password=646567475)
-    user3 = User(name='Oleg2', password=646567474)
     device = Device(name='SKF_2000', description='Я прибор, а не документ')
-    device2 = Device(name='SKF_2004', description='I AM ROBOT')
     product = Product(name='Морковь', barcode=237200121)
     product2 = Product(name='Эстрагон', barcode=237200543)
     product3 = Product(name='Имбирь', barcode=237200984)
     task = Task()
 
     task.users.extend([user1, user2])
-    task.devices.extend([device])
 
-    for user in user1, user2, user3:
-        session.add(user)
+    session.add(user1)
+    session.add(user2)
     session.add(device)
-    session.add(device2)
 
     session.add(product)
     session.add(product2)
@@ -132,37 +119,12 @@ def do_select(session: Session):
     for user in request.unique().scalars().all():
         print(user.name, user.password, [task.id for task in user.tasks])
 
+        # def select_users_who_use_devices(session: Session, Device=None):
+        #     request = session.execute(select(Device).options(joinedload(Device.tasks)))
+        #     for Device in request.unique().scalars().all():
+        #         print(User.name, [task.id for task in Device.tasks])
 
-
-    # random_row = session.query(User).order_by(func.rundom()).first
-    # random_row = session.query(User).offset().limit(counter).all
-
-
-
-def random_init (session: Session, counter: int):
-    for i in range(counter):
-        name = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz', k=random.randint(3, 9)))
-        password = random.randint(100000000, 999999999)
-        user = User(name=name, password=password)
-        session.add(user)
-    session.commit()
-
-
-
-def select_users_by_device_name(session: Session, device_name: str):
-    request = session.execute(
-        select(Device)
-        .where(Device.name == device_name)
-        .options(
-            joinedload(Device.tasks).options(joinedload(Task.users)),
-        )
-    )
-    users = []
-    for device in request.unique().scalars().all():
-        for task in device.tasks:
-            for user in task.users:
-                users.append(user)
-    return users
+        data_generator(User, {'name': uuid4, 'password': ...}, 16, session)
 
 
 def data_generator(
@@ -171,7 +133,9 @@ def data_generator(
         count: int,
         session: Session
 ) -> None:
-    """Генерирует записи соответственно введённой функции."""
+    """Генерирует записи соответственно введённой функции.
+
+    :argument model ORM модель Sqlalchemy"""
     for _ in range(count):
         data = dict()
         for filed, func in fileds.items():
@@ -218,15 +182,31 @@ def random_init_device(session: Session, counter: int):
         device = Device(name=name, description=description)
         session.add(device)
     session.commit()
-  
+
+
 def main():
     engine = create_engine('sqlite:///db.sqlite3', echo=True)
-    # create_tables(engine)
+    create_tables(engine)
     with Session(engine) as session:
         # task1init(session)
+        data_generator(
+            model=User,
+            fileds={
+                'name': lambda: ''.join(random.choices(
+                    string.ascii_lowercase,
+                    k=random.randint(7, 24)
+                )),
+                'password': lambda: random.randint(100000000, 999999999),
+            },
+            count=15,
+            session=session
+
+        )
+        # random_init_users(session, 20000)
+        # random_init_products(session, 35768)
+        # random_init_device(session, 36489)
         # do_select(session)
-        # print(select_users_by_device_name(session, 'SKF_2000'))
-        random_init(session, 2)
+        # select_users_who_use_devices(session)
 
 
 if __name__ == '__main__':
