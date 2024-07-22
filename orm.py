@@ -165,6 +165,60 @@ def select_users_by_device_name(session: Session, device_name: str):
     return users
 
 
+def data_generator(
+        model: Base,
+        fileds: dict[str, Callable],
+        count: int,
+        session: Session
+) -> None:
+    """Генерирует записи соответственно введённой функции."""
+    for _ in range(count):
+        data = dict()
+        for filed, func in fileds.items():
+            data[filed] = func()
+        session.add(model(**data))
+    session.commit()
+
+
+def random_init_users(session: Session, counter: int):
+    for _ in range(counter):
+        name = ''.join(random.choices(
+            string.ascii_lowercase,
+            k=random.randint(3, 9)
+        ))
+        password = random.randint(100000000, 999999999)
+        user = User(name=name, password=password)
+        session.add(user)
+    session.commit()
+
+
+def random_init_products(session: Session, counter: int):
+    for _ in range(counter):
+        name = ''.join(random.choices(
+            string.ascii_lowercase,
+            k=random.randint(7, 24)
+        ))
+        barcode = random.randint(100000000, 999999999)
+        product = Product(name=name, barcode=barcode)
+        session.add(product)
+    session.commit()
+
+
+def random_init_device(session: Session, counter: int):
+    for _ in range(counter):
+        name = 'SKF_' + ''.join(random.choices(
+            # string.ascii_lowercase,
+            string.hexdigits,
+            k=random.randint(3, 12)
+        ))
+        description = ''.join(random.choices(
+            string.ascii_lowercase,
+            k=random.randint(24, 170)
+        ))
+        device = Device(name=name, description=description)
+        session.add(device)
+    session.commit()
+  
 def main():
     engine = create_engine('sqlite:///db.sqlite3', echo=True)
     # create_tables(engine)
