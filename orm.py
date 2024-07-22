@@ -1,7 +1,8 @@
 from datetime import datetime
+from random import random
 from uuid import uuid4
 
-from sqlalchemy import ForeignKey, create_engine, UUID, Uuid, select
+from sqlalchemy import ForeignKey, create_engine, UUID, Uuid, select, func
 from sqlalchemy.orm import (declared_attr, DeclarativeBase, Mapped,
                             mapped_column, relationship, Session, joinedload)
 
@@ -132,6 +133,22 @@ def do_select(session: Session):
         print(user.name, user.password, [task.id for task in user.tasks])
 
 
+
+    # random_row = session.query(User).order_by(func.rundom()).first
+    # random_row = session.query(User).offset().limit(counter).all
+
+
+
+def random_init (session: Session, counter: int):
+    for i in range(counter):
+        name = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz', k=random.randint(3, 9)))
+        password = random.randint(100000000, 999999999)
+        user = User(name=name, password=password)
+        session.add(user)
+    session.commit()
+
+
+
 def select_users_by_device_name(session: Session, device_name: str):
     request = session.execute(
         select(Device)
@@ -154,7 +171,8 @@ def main():
     with Session(engine) as session:
         # task1init(session)
         # do_select(session)
-        print(select_users_by_device_name(session, 'SKF_2000'))
+        # print(select_users_by_device_name(session, 'SKF_2000'))
+        random_init(session, 2)
 
 
 if __name__ == '__main__':
