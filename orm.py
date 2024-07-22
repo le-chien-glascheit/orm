@@ -202,6 +202,31 @@ def main():
             session=session
 
         )
+        data_generator(
+            model=Product,
+            fileds={
+                'name': lambda: ''.join(random.choices(
+                    string.ascii_lowercase,
+                    k=random.randint(7, 24))),
+                'barcode': lambda: random.randint(100000000, 999999999)
+            },
+            count=1300,
+            session=session
+        )
+
+        data_generator(
+            model=Device,
+            fileds={
+                'name': lambda: 'SKF_' + ''.join(random.choices(
+                    string.hexdigits,
+                    k=random.randint(3, 12))),
+                'description': lambda: ''.join(random.choices(
+                    string.ascii_letters + ' ',
+                    k=random.randint(24, 170)))
+            },
+            count=50,
+            session=session
+        )
         # random_init_users(session, 20000)
         # random_init_products(session, 35768)
         # random_init_device(session, 36489)
