@@ -20,3 +20,15 @@
 
     for row in response:
         print(row)
+
+
+response = session.execute(
+    select(Task.id, func.sum(Product.price * ProductQuantity.quantity))
+    .select_from(Task)
+    .join(ProductQuantity)
+    .join(Product)
+    .group_by(Task.id)
+)
+
+for row in response:
+    print(row)
