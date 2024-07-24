@@ -1,0 +1,22 @@
+  """
+    SELECT task.id, avg(product.price),
+    sum(product.price*productquantity.quantity) as Department_price
+
+    FROM task
+
+    JOIN productquantity ON productquantity.task_id = task.id
+
+    JOIN product ON product.id = productquantity.product_id
+
+    GROUP by task.id
+    """
+    response = session.execute(
+        select(Task.id, func.sum(Product.price * ProductQuantity.quantity))
+        .join(ProductQuantity)
+        .join(Product)
+        .group_by(Task.id)
+    )
+
+
+    for row in response:
+        print(row)
