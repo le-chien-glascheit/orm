@@ -32,3 +32,9 @@ response = session.execute(
 
 for row in response:
     print(row)
+
+
+
+sqla = SqlModel(**pyd.model_dump())
+
+pyd = PydModel.model_validate(sqla, from_attributes=True)
