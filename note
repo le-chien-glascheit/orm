@@ -1,40 +1,63 @@
-  """
-    SELECT task.id, avg(product.price),
-    sum(product.price*productquantity.quantity) as Department_price
+from uuid import uuid4
 
-    FROM task
-
-    JOIN productquantity ON productquantity.task_id = task.id
-
-    JOIN product ON product.id = productquantity.product_id
-
-    GROUP by task.id
-    """
-    response = session.execute(
-        select(Task.id, func.sum(Product.price * ProductQuantity.quantity))
-        .join(ProductQuantity)
-        .join(Product)
-        .group_by(Task.id)
-    )
-
-
-    for row in response:
-        print(row)
-
-
-response = session.execute(
-    select(Task.id, func.sum(Product.price * ProductQuantity.quantity))
-    .select_from(Task)
-    .join(ProductQuantity)
-    .join(Product)
-    .group_by(Task.id)
+from sqlalchemy import UUID, ForeignKey, Uuid, create_engine
+from sqlalchemy.orm import (
+    DeclarativeBase,
+    Mapped,
+    declared_attr,
+    mapped_column,
+    relationship,
 )
 
-for row in response:
-    print(row)
+from blogs.settings import DB_URL
 
 
+class Base(DeclarativeBase):
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
 
-sqla = SqlModel(**pyd.model_dump())
+    @declared_attr
+    @classmethod
+    def __tablename__(cls):
+        return cls.__name__.lower()
 
-pyd = PydModel.model_validate(sqla, from_attributes=True)
+
+class Post(Base):
+    title: Mapped[str]
+    text: Mapped[str]
+    user_id: Mapped[UUID] = mapped_column(ForeignKey('user.id'))
+
+    user: Mapped['User'] = relationship(back_populates='posts')
+
+
+class Subs(Base):
+    follower_id: Mapped[UUID] = mapped_column(ForeignKey('user.id'))
+    followed_id: Mapped[UUID] = mapped_column(ForeignKey('user.id'))
+
+
+class User(Base):
+    name: Mapped[str]
+    email: Mapped[str] = mapped_column(unique=True)
+    password: Mapped[str]
+
+    posts: Mapped[list[Post]] = relationship(back_populates='user')
+    followers: Mapped[list['User']] = relationship(
+        Subs,
+        back_populates='following',
+        foreign_keys='Subs.follower_id',
+
+    )
+    following: Mapped[list['User']] = relationship(
+        Subs,
+        back_populates='followers',
+        foreign_keys='Subs.followed_id',
+
+    )
+
+    def __repr__(self):
+        return f'User(name={self.name}, email={self.email})'
+
+
+if __name__ == '__main__':
+    print('creating db')
+    engine = create_engine(DB_URL)
+    Base.metadata.create_all(engine)
