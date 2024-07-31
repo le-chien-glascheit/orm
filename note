@@ -61,3 +61,28 @@ if __name__ == '__main__':
     print('creating db')
     engine = create_engine(DB_URL)
     Base.metadata.create_all(engine)
+
+
+
+id: UUID = column_property(mapped_column(UUID, primary_key=True, default=uuid4))
+name: str = column_property(mapped_column(str))
+email: str = column_property(mapped_column(str, unique=True))
+password: str = column_property(mapped_column(str))
+
+posts = relationship('Post', back_populates='user')
+followers = relationship("User",
+    secondary=Following.__tablename__,
+    primaryjoin=(id==Following.c.follower_id),
+    secondaryjoin=(id==Following.c.followed_id),
+    backref="following"
+)
+
+following = relationship("User",
+    secondary=Following.__tablename__,
+    primaryjoin=(id==Following.c.followed_id),
+    secondaryjoin=(id==Following.c.follower_id),
+    backref="followers"
+)
+
+def __repr__(self):
+    return f'User(name={self.name}, email={self.email})'
