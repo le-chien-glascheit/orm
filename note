@@ -1,88 +1,53 @@
 from uuid import uuid4
 
-from sqlalchemy import UUID, ForeignKey, Uuid, create_engine
-from sqlalchemy.orm import (
-    DeclarativeBase,
-    Mapped,
-    declared_attr,
-    mapped_column,
-    relationship,
-)
+from sqlalchemy import Column, ForeignKey, String, Table, create_engine
+from sqlalchemy.orm import declarative_base, relationship
 
 from blogs.settings import DB_URL
 
+Base = declarative_base()
 
-class Base(DeclarativeBase):
-    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
-
-    @declared_attr
-    @classmethod
-    def __tablename__(cls):
-        return cls.__name__.lower()
-
-
-class Post(Base):
-    title: Mapped[str]
-    text: Mapped[str]
-    user_id: Mapped[UUID] = mapped_column(ForeignKey('user.id'))
-
-    user: Mapped['User'] = relationship(back_populates='posts')
-
-
-class Subs(Base):
-    follower_id: Mapped[UUID] = mapped_column(ForeignKey('user.id'))
-    followed_id: Mapped[UUID] = mapped_column(ForeignKey('user.id'))
+subs_table = Table(
+    "subs",
+    Base.metadata,
+    Column("follower_id", String, ForeignKey("users.id")),
+    Column("followed_id", String, ForeignKey("users.id")),
+)
 
 
 class User(Base):
-    name: Mapped[str]
-    email: Mapped[str] = mapped_column(unique=True)
-    password: Mapped[str]
+    __tablename__ = "users"
 
-    posts: Mapped[list[Post]] = relationship(back_populates='user')
-    followers: Mapped[list['User']] = relationship(
-        Subs,
-        back_populates='following',
-        foreign_keys='Subs.follower_id',
+    id = Column(String, primary_key=True, default=str(uuid4()))
+    name = Column(String)
+    email = Column(String, unique=True)
+    password = Column(String)
 
-    )
-    following: Mapped[list['User']] = relationship(
-        Subs,
-        back_populates='followers',
-        foreign_keys='Subs.followed_id',
-
+    posts = relationship("Post", back_populates="user")
+    followers = relationship(
+        "User",
+        secondary=subs_table,
+        primaryjoin=id == subs_table.c.followed_id,
+        secondaryjoin=id == subs_table.c.follower_id,
+        backref="following",
     )
 
     def __repr__(self):
         return f'User(name={self.name}, email={self.email})'
 
 
-if __name__ == '__main__':
-    print('creating db')
+class Post(Base):
+    __tablename__ = "posts"
+
+    id = Column(String, primary_key=True, default=str(uuid4()))
+    title = Column(String)
+    text = Column(String)
+    user_id = Column(String, ForeignKey("users.id"))
+
+    user = relationship("User", back_populates="posts")
+
+
+if __name__ == "__main__":
+    print("creating db")
     engine = create_engine(DB_URL)
     Base.metadata.create_all(engine)
-
-
-
-id: UUID = column_property(mapped_column(UUID, primary_key=True, default=uuid4))
-name: str = column_property(mapped_column(str))
-email: str = column_property(mapped_column(str, unique=True))
-password: str = column_property(mapped_column(str))
-
-posts = relationship('Post', back_populates='user')
-followers = relationship("User",
-    secondary=Following.__tablename__,
-    primaryjoin=(id==Following.c.follower_id),
-    secondaryjoin=(id==Following.c.followed_id),
-    backref="following"
-)
-
-following = relationship("User",
-    secondary=Following.__tablename__,
-    primaryjoin=(id==Following.c.followed_id),
-    secondaryjoin=(id==Following.c.follower_id),
-    backref="followers"
-)
-
-def __repr__(self):
-    return f'User(name={self.name}, email={self.email})'
